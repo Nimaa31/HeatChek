@@ -36,7 +36,9 @@ RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
 RUN mkdir -p config/jwt
 
 # Set permissions
-RUN chown -R www-data:www-data var/ config/jwt/
+RUN mkdir -p var config/jwt \
+ && chown -R www-data:www-data var config/jwt
+
 
 # Clear and warmup cache
 RUN php bin/console cache:clear --env=prod --no-debug || true
