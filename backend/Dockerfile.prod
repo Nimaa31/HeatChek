@@ -1,34 +1,41 @@
 FROM php:8.2-cli
 
+# Install dependencies
 RUN apt-get update && apt-get install -y \
     git curl libpq-dev libzip-dev libicu-dev unzip \
- && docker-php-ext-install pdo pdo_pgsql pgsql zip intl opcache \
- && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && docker-php-ext-install pdo pdo_pgsql pgsql zip intl opcache \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# PHP config
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 
+# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
+# Install dependencies
 COPY composer.json composer.lock* ./
-RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --optimize-autoloader
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 
+# Copy application
 COPY . .
+
+# Finish composer install
 RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
 
-# Ensure runtime dirs exist
-RUN mkdir -p var config/jwt \
- && chown -R www-data:www-data var config/jwt
+# Create directories
+RUN mkdir -p var config/jwt && chown -R www-data:www-data var config/jwt
 
-# Clear and warmup cache
+# Build cache
 RUN php bin/console cache:clear --env=prod --no-debug || true
 RUN php bin/console cache:warmup --env=prod --no-debug || true
 
-# Copy and setup start script (convert CRLF to LF for Linux)
+# Copy and setup start script
 COPY start.sh /start.sh
 RUN sed -i 's/\r$//' /start.sh && chmod +x /start.sh
 
 EXPOSE 8000
 
+# IMPORTANT: Use sh -c to interpret variables
 CMD ["sh", "/start.sh"]
