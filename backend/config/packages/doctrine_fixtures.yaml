@@ -1,4 +1,0 @@
-when@dev:
-    doctrine_fixtures:
-        paths:
-            - '%kernel.project_dir%/src/DataFixtures'
