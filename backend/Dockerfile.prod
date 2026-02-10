@@ -1,0 +1,51 @@
+FROM php:8.2-cli
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpq-dev \
+    libzip-dev \
+    libicu-dev \
+    unzip \
+    && docker-php-ext-install pdo pdo_pgsql pgsql zip intl opcache \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# PHP production config
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy composer files first for better caching
+COPY composer.json composer.lock* ./
+
+# Install dependencies (production)
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --optimize-autoloader
+
+# Copy the rest of the application
+COPY . .
+
+# Generate optimized autoloader
+RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
+
+# Create JWT directory and generate keys
+RUN mkdir -p config/jwt
+
+# Set permissions
+RUN chown -R www-data:www-data var/ config/jwt/
+
+# Clear and warmup cache
+RUN php bin/console cache:clear --env=prod --no-debug || true
+RUN php bin/console cache:warmup --env=prod --no-debug || true
+
+# Expose port (Railway assigns PORT env var)
+EXPOSE 8000
+
+# Start script that handles migrations and server
+CMD php bin/console lexik:jwt:generate-keypair --skip-if-exists --no-interaction && \
+    php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration && \
+    php -S 0.0.0.0:${PORT:-8000} -t public
