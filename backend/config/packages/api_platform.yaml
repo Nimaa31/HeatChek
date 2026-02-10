@@ -1,0 +1,36 @@
+api_platform:
+    title: HeatCheck API
+    description: API for French Rap voting app
+    version: 1.0.0
+
+    mapping:
+        paths: ['%kernel.project_dir%/src/Entity']
+
+    formats:
+        jsonld: ['application/ld+json']
+        json: ['application/json']
+
+    docs_formats:
+        jsonld: ['application/ld+json']
+        jsonopenapi: ['application/vnd.openapi+json']
+        html: ['text/html']
+
+    swagger:
+        versions: [3]
+
+    defaults:
+        stateless: true
+        cache_headers:
+            vary: ['Content-Type', 'Authorization', 'Origin']
+        extra_properties:
+            standard_put: true
+            rfc_7807_compliant_errors: true
+        pagination_items_per_page: 20
+        pagination_maximum_items_per_page: 100
+        pagination_client_items_per_page: true
+
+    collection:
+        pagination:
+            enabled: true
+            items_per_page_parameter_name: itemsPerPage
+            page_parameter_name: page

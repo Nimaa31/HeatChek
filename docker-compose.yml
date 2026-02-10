@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: heatcheck_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: heatcheck
+      POSTGRES_USER: heatcheck
+      POSTGRES_PASSWORD: heatcheck_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - heatcheck_network
+
+  # Symfony Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: heatcheck_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www/html
+      - /var/www/html/vendor
+    environment:
+      DATABASE_URL: postgresql://heatcheck:heatcheck_secret@db:5432/heatcheck?serverVersion=15&charset=utf8
+      APP_ENV: dev
+      APP_SECRET: heatcheck_app_secret_change_in_production
+      CORS_ALLOW_ORIGIN: ^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$
+      JWT_SECRET_KEY: '%kernel.project_dir%/config/jwt/private.pem'
+      JWT_PUBLIC_KEY: '%kernel.project_dir%/config/jwt/public.pem'
+      JWT_PASSPHRASE: heatcheck_jwt_passphrase
+    depends_on:
+      - db
+    networks:
+      - heatcheck_network
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: heatcheck_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+    networks:
+      - heatcheck_network
+
+volumes:
+  postgres_data:
+
+networks:
+  heatcheck_network:
+    driver: bridge
