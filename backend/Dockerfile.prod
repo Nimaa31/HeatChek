@@ -21,6 +21,15 @@ RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
 RUN mkdir -p var config/jwt \
  && chown -R www-data:www-data var config/jwt
 
+# Clear and warmup cache
+RUN php bin/console cache:clear --env=prod --no-debug || true
+RUN php bin/console cache:warmup --env=prod --no-debug || true
+
+# Copy and setup start script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
 EXPOSE 8000
 
-CMD php -S 0.0.0.0:8000 -t public
+# Start with bash script (properly interprets $PORT)
+CMD ["/start.sh"]
