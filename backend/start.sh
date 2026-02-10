@@ -1,6 +1,10 @@
 #!/bin/sh
 set -e
 
+# Force production environment
+export APP_ENV=prod
+export APP_DEBUG=0
+
 echo "=== HeatCheck Backend Starting ==="
 echo "PORT variable: ${PORT}"
 PORT="${PORT:-8000}"
